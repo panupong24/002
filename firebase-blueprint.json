@@ -1,0 +1,105 @@
+{
+  "entities": {
+    "Trip": {
+      "title": "Bus Trip",
+      "description": "A scheduled bus trip route with capacity and seat occupancy",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 100 },
+        "operatorName": { "type": "string", "maxLength": 100 },
+        "operatorCode": { "type": "string", "maxLength": 20 },
+        "busType": { "type": "string", "maxLength": 100 },
+        "busNumber": { "type": "string", "maxLength": 50 },
+        "fromCity": { "type": "string", "maxLength": 100 },
+        "fromStation": { "type": "string", "maxLength": 150 },
+        "toCity": { "type": "string", "maxLength": 100 },
+        "toStation": { "type": "string", "maxLength": 150 },
+        "departureTime": { "type": "string", "maxLength": 20 },
+        "arrivalTime": { "type": "string", "maxLength": 20 },
+        "duration": { "type": "string", "maxLength": 50 },
+        "distanceKm": { "type": "number" },
+        "price": { "type": "number" },
+        "availableSeats": { "type": "number" },
+        "totalSeats": { "type": "number" },
+        "amenities": { "type": "array" },
+        "occupiedSeatIds": { "type": "array" },
+        "rating": { "type": "number" },
+        "reviewsCount": { "type": "number" }
+      },
+      "required": [
+        "operatorName",
+        "operatorCode",
+        "busType",
+        "busNumber",
+        "fromCity",
+        "fromStation",
+        "toCity",
+        "toStation",
+        "departureTime",
+        "arrivalTime",
+        "price",
+        "availableSeats",
+        "totalSeats",
+        "occupiedSeatIds"
+      ]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "A bus ticket reservation created by a passenger",
+      "type": "object",
+      "properties": {
+        "bookingId": { "type": "string", "maxLength": 100 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "tripId": { "type": "string", "maxLength": 100 },
+        "travelDate": { "type": "string", "maxLength": 30 },
+        "passengers": { "type": "array" },
+        "contact": { "type": "object" },
+        "selectedSeatIds": { "type": "array" },
+        "basePrice": { "type": "number" },
+        "insuranceFee": { "type": "number" },
+        "serviceFee": { "type": "number" },
+        "totalPrice": { "type": "number" },
+        "paymentMethod": { "type": "string", "maxLength": 50 },
+        "paymentStatus": { "type": "string", "maxLength": 30 },
+        "bookingDate": { "type": "string", "maxLength": 50 }
+      },
+      "required": [
+        "bookingId",
+        "userId",
+        "tripId",
+        "travelDate",
+        "passengers",
+        "contact",
+        "selectedSeatIds",
+        "totalPrice",
+        "paymentMethod",
+        "paymentStatus"
+      ]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Authorized administrator user profile",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/trips/{tripId}": {
+      "schema": "Trip",
+      "description": "Collection of bus trip schedules and live seat availability"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Collection of passenger bookings"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Privileged admin directory"
+    }
+  }
+}

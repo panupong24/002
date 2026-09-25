@@ -1,0 +1,6 @@
+{
+  "name": "Bus Booking",
+  "description": "ระบบจองตั๋วรถทัวร์ออนไลน์ ค้นหาเส้นทาง เลือกรอบรถ เลือกผังที่นั่ง 2+2 และยืนยันการจองตั๋วโดยสาร",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

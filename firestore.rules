@@ -1,0 +1,135 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == '684234020@parichat.skru.ac.th' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll([
+        'bookingId', 'userId', 'tripId', 'travelDate',
+        'passengers', 'contact', 'selectedSeatIds',
+        'totalPrice', 'paymentMethod', 'paymentStatus'
+      ]) &&
+      data.bookingId is string && data.bookingId.size() <= 100 &&
+      data.userId is string && data.userId.size() <= 128 &&
+      data.tripId is string && data.tripId.size() <= 100 &&
+      data.travelDate is string && data.travelDate.size() <= 50 &&
+      data.passengers is list && data.passengers.size() > 0 && data.passengers.size() <= 10 &&
+      data.contact is map &&
+      data.selectedSeatIds is list && data.selectedSeatIds.size() > 0 && data.selectedSeatIds.size() <= 10 &&
+      data.totalPrice is number && data.totalPrice >= 0 &&
+      data.paymentMethod is string && data.paymentMethod.size() <= 50 &&
+      data.paymentStatus is string && data.paymentStatus.size() <= 30;
+    }
+
+    function isValidTrip(data) {
+      return data.keys().hasAll([
+        'operatorName', 'operatorCode', 'busType', 'busNumber',
+        'fromCity', 'fromStation', 'toCity', 'toStation',
+        'departureTime', 'arrivalTime', 'price', 'availableSeats',
+        'totalSeats', 'occupiedSeatIds'
+      ]) &&
+      data.operatorName is string && data.operatorName.size() <= 100 &&
+      data.busType is string && data.busType.size() <= 100 &&
+      data.busNumber is string && data.busNumber.size() <= 50 &&
+      data.fromCity is string && data.fromCity.size() <= 100 &&
+      data.toCity is string && data.toCity.size() <= 100 &&
+      data.price is number && data.price >= 0 &&
+      data.availableSeats is number && data.availableSeats >= 0 &&
+      data.totalSeats is number && data.totalSeats > 0 &&
+      data.occupiedSeatIds is list && data.occupiedSeatIds.size() <= 100;
+    }
+
+    // Admins Collection
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Trips Collection
+    match /trips/{tripId} {
+      // Public search allows viewing available trips and schedules
+      allow get, list: if true;
+
+      // Only admins can create and delete trips
+      allow create: if isValidId(tripId) && isAdmin() && isValidTrip(incoming());
+      allow delete: if isValidId(tripId) && isAdmin();
+
+      // Trips can be updated by Admins or atomically by passenger booking seats
+      allow update: if isValidId(tripId) && (
+        isAdmin() ||
+        (
+          isSignedIn() &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['occupiedSeatIds', 'availableSeats', 'updatedAt']) &&
+          incoming().occupiedSeatIds is list &&
+          incoming().occupiedSeatIds.size() > existing().occupiedSeatIds.size() &&
+          incoming().occupiedSeatIds.hasAll(existing().occupiedSeatIds) &&
+          incoming().availableSeats is number &&
+          incoming().availableSeats >= 0
+        )
+      );
+    }
+
+    // Bookings Collection
+    match /bookings/{bookingId} {
+      // Individual get: owner or admin
+      allow get: if isValidId(bookingId) && isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+
+      // List query: must query own bookings or be admin
+      allow list: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+
+      // Create booking: must be authenticated and booking belongs to user
+      allow create: if isValidId(bookingId) &&
+        isSignedIn() &&
+        incoming().userId == request.auth.uid &&
+        isValidBooking(incoming());
+
+      // Update: Admin or user updating paymentStatus
+      allow update: if isValidId(bookingId) && isSignedIn() && (
+        isAdmin() ||
+        (
+          existing().userId == request.auth.uid &&
+          incoming().userId == request.auth.uid &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['paymentStatus', 'updatedAt'])
+        )
+      );
+
+      // Delete/Cancel: Owner or admin
+      allow delete: if isValidId(bookingId) && isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+    }
+  }
+}
